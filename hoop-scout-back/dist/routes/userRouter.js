@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const ControllerUser_1 = require("../controller/ControllerUser");
+const schemaValidator_1 = __importDefault(require("../middlewares/schemaValidator"));
+const userSchema_1 = require("../schemas/userSchema");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const authCoachMiddleware_1 = require("../middlewares/authCoachMiddleware");
+const authAthleteMiddleware_1 = require("../middlewares/authAthleteMiddleware");
+const userRouter = (0, express_1.Router)();
+const controllerUser = new ControllerUser_1.ControllerUser();
+userRouter.get('/user/profile', authMiddleware_1.validateTokenAuth, controllerUser.getInfo.bind(controllerUser));
+userRouter.post('/signup', (0, schemaValidator_1.default)(userSchema_1.userSchema), controllerUser.signup.bind(controllerUser));
+userRouter.post('/login', (0, schemaValidator_1.default)(userSchema_1.loginSchema), controllerUser.login.bind(controllerUser));
+userRouter.put('/user/edit', authMiddleware_1.validateTokenAuth, controllerUser.editProfile.bind(controllerUser));
+userRouter.post('/user/auth', authMiddleware_1.validateTokenAuth, controllerUser.verifyAuthUser.bind(controllerUser));
+userRouter.post('/athlete/auth', authAthleteMiddleware_1.validateTokenAthleteAuth, controllerUser.verifyAuthAthlete.bind(controllerUser));
+userRouter.post('/coach/auth', authCoachMiddleware_1.validateTokenCoachAuth, controllerUser.verifyAuthCoach.bind(controllerUser));
+exports.default = userRouter;

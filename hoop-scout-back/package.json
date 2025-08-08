@@ -1,0 +1,45 @@
+{
+  "name": "hoop-scout-back",
+  "version": "1.0.0",
+  "description": "Hoop Scout API",
+  "main": "server.ts",
+  "engines": {
+    "node": "18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/server.ts",
+    "dev": "nodemon src/server.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasmartinso/hoop-scout-back.git"
+  },
+  "author": "Christian, Caio, Lucas Martins",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lucasmartinso/hoop-scout-back/issues"
+  },
+  "homepage": "https://github.com/lucasmartinso/hoop-scout-back#readme",
+  "dependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "ts-node": "^10.9.2",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "nodemon": "^3.1.4",
+    "types": "^0.1.1"
+  }
+}
