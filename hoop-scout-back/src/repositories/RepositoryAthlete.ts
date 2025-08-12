@@ -4,9 +4,10 @@ import { Athlete } from "../entity/Athlete";
 
 export async function getProbabilityCalc(id: number): Promise<Athlete[]> {
     const { rows: athletes }: QueryResult<Athlete> = await connection.query(`
-        SELECT "height", "weight", "age", "freeThrow", "longShot", "shortShot", "assistsGame"
-        FROM "Athlete"
-        WHERE "userId" = $1;
+        SELECT a."height", a."weight", a."age", a."freeThrow", a."longShot", a."shortShot", a."assistsGame", u.name
+        FROM "Athlete" a
+        INNER JOIN "User" u ON a."userId" = u."id"
+        WHERE a."userId" = $1;
     `,[id]);
     
     return athletes;
@@ -14,9 +15,10 @@ export async function getProbabilityCalc(id: number): Promise<Athlete[]> {
 
 export async function getAthleteData(id: number): Promise<Athlete[]> {
     const { rows: athletes }: QueryResult<Athlete> = await connection.query(`
-        SELECT * 
-        FROM "Athlete" 
-        WHERE "userId" = $1;
+        SELECT a.*, u.name 
+        FROM "Athlete" a
+        INNER JOIN "User" u ON a."userId" = u."id"
+        WHERE a."userId" = $1;
     `,[id]);
     
     return athletes;

@@ -19,8 +19,6 @@ export async function publishAthleteGrade(rating: ratingType, athleteId: number,
     const athlete: Athlete = await getAthleteById(athleteId); 
     if(!athlete) throw { type: 'Bad Request', message: 'Usuario-atleta inexistente' };
 
-    if(athlete.assistsGame) throw { type: 'Bad Request', message: 'Atleta ja foi avaliado' };
     rating.coachId = coachId;
-
-    await coachRepository.publishAthleteGrade(rating, athleteId);
+    await coachRepository.updateAthleteGrade(rating, athleteId);
 }

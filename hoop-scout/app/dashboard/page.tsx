@@ -38,16 +38,6 @@ export default function DashboardPage() {
       return Number(val.slice(0, -1)) / 10 // Divide por 10 para ajustar escala
     }
 
-    const formatHeight = (height: string) => {
-      if (!height || typeof height !== 'string') return 0
-      return Number(height.replace(',', '.').slice(0, -1))
-    }
-
-    const formatWeight = (weight: string) => {
-      if (!weight || typeof weight !== 'string') return 0
-      return Number(weight.slice(0, -2)) / 10 // Divide por 10 para ajustar escala
-    }
-
     return [
       { subject: "Física", A: athlete.age ? (athlete.age / 4) : 0 }, // Normalizar idade
       { subject: "Habilidades", A: formatPercentage(athlete.shortShot) },
@@ -276,10 +266,15 @@ export default function DashboardPage() {
                             >
                               Ver Estatísticas
                             </Button>
-                            <Button className="text-blue-600 hover:text-blue-800" onClick={() => (window.location.href = `/athlete/rating/${athlete.userId}`)}>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Avaliar Atleta
-                            </Button>
+                            {role === 'coach' && (
+                              <Button 
+                                className="text-blue-600 hover:text-blue-800" 
+                                onClick={() => (window.location.href = `/athlete/rating/${athlete.userId}`)}
+                              >
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Avaliar Atleta
+                              </Button>
+                            )}
                           </Link>
                         </TableCell>
                       </TableRow>

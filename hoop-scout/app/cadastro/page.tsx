@@ -17,6 +17,7 @@ type Errors = {
   email?: string;
   senha?: string;
   confirmarSenha?: string;
+  role?: string;
 };
 
 export default function CadastroPage() {
@@ -67,7 +68,7 @@ export default function CadastroPage() {
     const payload = {
       name: formData.nome,
       email: formData.email,
-      password: formData.senha,
+      password: formData.senha
     }
     try {
       const response = await fetch("http://localhost:8083/signup", {
