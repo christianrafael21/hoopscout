@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 interface Avaliacao {
+  data: Date | string;
   dados_fisicos?: DadosFisicos;
   dados_tecnicos?: DadosTecnicos;
 }
@@ -78,16 +79,28 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
           return;
         }
 
-        // Calcular médias do atleta
-        const somaDadosFisicos = avaliacoes.reduce((acc: DadosFisicos, av: Avaliacao) => {
-          if (av.dados_fisicos) {
-            acc.idade += av.dados_fisicos.idade;
-            acc.altura += av.dados_fisicos.altura;
-            acc.peso += av.dados_fisicos.peso;
-          }
-          return acc;
-        }, { idade: 0, altura: 0, peso: 0 });
+        // Ordenar avaliações por data (mais recente primeiro)
+        const avaliacoesOrdenadas = avaliacoes.sort((a: Avaliacao, b: Avaliacao) => {
+          const dataA = new Date(a.data);
+          const dataB = new Date(b.data);
+          return dataB.getTime() - dataA.getTime();
+        });
 
+        console.log(`[DEBUG COMPARACAO] Avaliações ordenadas:`, avaliacoesOrdenadas);
+
+        // Usar apenas a avaliação mais recente para dados físicos (idade atual)
+        const avaliacaoMaisRecente = avaliacoesOrdenadas[0];
+        const dadosFisicosMaisRecente = avaliacaoMaisRecente.dados_fisicos;
+
+        if (!dadosFisicosMaisRecente) {
+          setError('Avaliação mais recente não possui dados físicos');
+          setLoading(false);
+          return;
+        }
+
+        console.log(`[DEBUG COMPARACAO] Dados físicos mais recentes:`, dadosFisicosMaisRecente);
+
+        // Para dados técnicos, calcular média de todas as avaliações
         const somaDadosTecnicos = avaliacoes.reduce((acc: DadosTecnicos, av: Avaliacao) => {
           if (av.dados_tecnicos) {
             acc.tiro_livre += av.dados_tecnicos.tiro_livre;
@@ -99,10 +112,12 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
         }, { tiro_livre: 0, arremesso_tres: 0, arremesso_livre: 0, assistencias: 0 });
 
         const mediaDadosFisicos = {
-          idade: Math.round(somaDadosFisicos.idade / avaliacoes.length),
-          altura: Number((somaDadosFisicos.altura / avaliacoes.length).toFixed(2)),
-          peso: Number((somaDadosFisicos.peso / avaliacoes.length).toFixed(2))
+          idade: dadosFisicosMaisRecente.idade || 0, // Usar idade atual, não média
+          altura: Number(dadosFisicosMaisRecente.altura) || 0, // Converter para número e usar fallback
+          peso: Number(dadosFisicosMaisRecente.peso) || 0 // Converter para número e usar fallback
         };
+
+        console.log(`[DEBUG COMPARACAO] Dados físicos processados:`, mediaDadosFisicos);
 
         const mediaDadosTecnicos = {
           tiro_livre: Number((somaDadosTecnicos.tiro_livre / avaliacoes.length).toFixed(2)),
@@ -196,21 +211,42 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
   const formatarDadosFisicos = () => {
     if (!dados || !dados.atletaOuro) return [];
 
+    // Validar valores para evitar NaN - conversão mais robusta
+    const alturaAtleta = Number(dados.mediaDadosFisicos.altura) || 0;
+    const pesoAtleta = Number(dados.mediaDadosFisicos.peso) || 0;
+    const alturaOuro = Number(dados.atletaOuro.altura_ideal) || 0;
+    const pesoOuro = Number(dados.atletaOuro.peso_ideal) || 0;
+
+    console.log(`[DEBUG] Dados físicos formatados:`, {
+      alturaAtleta,
+      pesoAtleta,
+      alturaOuro,
+      pesoOuro,
+      dadosOriginais: {
+        altura: dados.mediaDadosFisicos.altura,
+        peso: dados.mediaDadosFisicos.peso,
+        alturaIdeal: dados.atletaOuro.altura_ideal,
+        pesoIdeal: dados.atletaOuro.peso_ideal
+      }
+    });
+
     return [
       {
         name: 'Altura (m)',
-        Atleta: dados.mediaDadosFisicos.altura,
-        AtletaOuro: Number(dados.atletaOuro.altura_ideal)
+        Atleta: alturaAtleta,
+        AtletaOuro: alturaOuro
       },
       {
         name: 'Peso (kg)', 
-        Atleta: dados.mediaDadosFisicos.peso,
-        AtletaOuro: Number(dados.atletaOuro.peso_ideal)
+        Atleta: pesoAtleta,
+        AtletaOuro: pesoOuro
       }
     ];
   };
 
   const calcularPercentualAtingimento = (valorAtleta: number, valorOuro: number): number => {
+    // Validar valores para evitar NaN
+    if (!valorAtleta || !valorOuro || valorOuro === 0) return 0;
     return Math.min((valorAtleta / valorOuro) * 100, 100);
   };
 
@@ -368,13 +404,13 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Altura:</span>
                       <span className="font-medium">
-                        {dados.mediaDadosFisicos.altura.toFixed(2)}m vs {Number(dados.atletaOuro.altura_ideal).toFixed(2)}m
+                        {Number(dados.mediaDadosFisicos.altura).toFixed(2) || '0.00'}m vs {Number(dados.atletaOuro.altura_ideal).toFixed(2) || '0.00'}m
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Peso:</span>
                       <span className="font-medium">
-                        {dados.mediaDadosFisicos.peso.toFixed(1)}kg vs {Number(dados.atletaOuro.peso_ideal).toFixed(1)}kg
+                        {Number(dados.mediaDadosFisicos.peso).toFixed(1) || '0.0'}kg vs {Number(dados.atletaOuro.peso_ideal).toFixed(1) || '0.0'}kg
                       </span>
                     </div>
                   </div>
