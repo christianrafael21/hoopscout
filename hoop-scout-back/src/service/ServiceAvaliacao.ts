@@ -6,14 +6,9 @@ import * as atletaOuroRepository from "../repositories/RepositoryAtletaOuro";
 
 // Função para determinar categoria de idade conforme regras do basquete
 function determinarCategoriaIdade(idade: number): number {
-    if (idade <= 8) return 8;
-    if (idade <= 10) return 10;
-    if (idade <= 12) return 12;
-    if (idade <= 14) return 14;
-    if (idade <= 15) return 15;
-    if (idade <= 17) return 17;
-    if (idade <= 18) return 18;
-    return 21; // Acima de 18 anos vai para categoria adulta (21)
+    if (idade <= 14) return 15; // Todos até 14 anos -> categoria Sub-15
+    if (idade <= 18) return 18; // Todos de 15-18 anos -> categoria Sub-18
+    throw new Error('Idade não permitida no sistema'); // Acima de 18 não pode
 }
 
 export async function create(dados: Omit<Avaliacao, 'id_avaliacao' | 'nota_media' | 'dados_fisicos' | 'dados_tecnicos' | 'atleta_ouro'> & { id_atleta: number }, id_coach: number): Promise<number> {

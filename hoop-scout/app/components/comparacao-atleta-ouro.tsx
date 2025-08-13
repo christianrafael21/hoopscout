@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 interface Avaliacao {
   dados_fisicos?: DadosFisicos;
@@ -113,17 +113,10 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
 
         // Determinar a categoria de idade correta para buscar o atleta ouro
         const determinarCategoriaIdade = (idade: number): number => {
-          // Categorias baseadas nas divisões comuns do basquete
-          // O atleta é comparado com a categoria ACIMA da sua idade
-          if (idade <= 7) return 8;   // Até 7 anos -> categoria Sub-8
-          if (idade <= 9) return 10;  // 8-9 anos -> categoria Sub-10  
-          if (idade <= 11) return 12; // 10-11 anos -> categoria Sub-12
-          if (idade <= 13) return 14; // 12-13 anos -> categoria Sub-14
-          if (idade <= 14) return 15; // 14 anos -> categoria Sub-15
-          if (idade <= 16) return 17; // 15-16 anos -> categoria Sub-17
-          if (idade <= 17) return 18; // 17 anos -> categoria Sub-18
-          if (idade <= 20) return 21; // 18-20 anos -> categoria Sub-21
-          return 21; // Para idades acima de 20, usar a categoria mais alta
+          // Regras específicas: apenas SUB-15 e SUB-18
+          if (idade <= 14) return 15; // Todos até 14 anos -> categoria Sub-15
+          if (idade <= 18) return 18; // Todos de 15-18 anos -> categoria Sub-18
+          throw new Error('Idade não permitida no sistema'); // Acima de 18 não pode
         };
 
         const categoriaIdade = determinarCategoriaIdade(mediaDadosFisicos.idade);
@@ -200,6 +193,33 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
     return dadosRadar;
   };
 
+  const formatarDadosFisicos = () => {
+    if (!dados || !dados.atletaOuro) return [];
+
+    return [
+      {
+        name: 'Altura (m)',
+        Atleta: dados.mediaDadosFisicos.altura,
+        AtletaOuro: Number(dados.atletaOuro.altura_ideal)
+      },
+      {
+        name: 'Peso (kg)', 
+        Atleta: dados.mediaDadosFisicos.peso,
+        AtletaOuro: Number(dados.atletaOuro.peso_ideal)
+      }
+    ];
+  };
+
+  const calcularPercentualAtingimento = (valorAtleta: number, valorOuro: number): number => {
+    return Math.min((valorAtleta / valorOuro) * 100, 100);
+  };
+
+  const getCorPercentual = (percentual: number): string => {
+    if (percentual >= 90) return 'text-green-600 bg-green-100';
+    if (percentual >= 70) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -237,10 +257,10 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico de Radar */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* Gráfico de Radar - Habilidades Técnicas */}
               <div className="h-[400px]">
-                <h4 className="text-lg font-medium mb-4 text-center">Comparação Técnica</h4>
+                <h4 className="text-lg font-medium mb-4 text-center">Habilidades Técnicas</h4>
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={formatarDadosRadar()}>
                     <PolarGrid />
@@ -267,52 +287,121 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
                 </ResponsiveContainer>
               </div>
 
+              {/* Gráfico de Barras - Dados Físicos */}
+              <div className="h-[400px]">
+                <h4 className="text-lg font-medium mb-4 text-center">Comparação Física</h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={formatarDadosFisicos()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar 
+                      dataKey="Atleta" 
+                      fill="#1a75ff" 
+                      name="Atleta"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="AtletaOuro" 
+                      fill="#ffd700" 
+                      name="Padrão Ouro"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Legend />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
               {/* Comparação Detalhada */}
               <div className="space-y-4">
-                <h4 className="text-lg font-medium">Comparação Detalhada</h4>
+                <h4 className="text-lg font-medium">Análise Detalhada</h4>
                 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-600">
+                  <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-600">
                     <div>Habilidade</div>
                     <div>Atleta</div>
                     <div>Padrão Ouro</div>
+                    <div>Atingimento</div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
+                  <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded">
                     <div>Tiro Livre</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.tiro_livre.toFixed(1)}%</div>
                     <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.livre_ideal).toFixed(1)}%</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getCorPercentual(calcularPercentualAtingimento(dados.mediaDadosTecnicos.tiro_livre, Number(dados.atletaOuro.livre_ideal)))}`}>
+                      {calcularPercentualAtingimento(dados.mediaDadosTecnicos.tiro_livre, Number(dados.atletaOuro.livre_ideal)).toFixed(0)}%
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
+                  <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded">
                     <div>Arremesso de 3</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.arremesso_tres.toFixed(1)}%</div>
                     <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.tres_ideal).toFixed(1)}%</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getCorPercentual(calcularPercentualAtingimento(dados.mediaDadosTecnicos.arremesso_tres, Number(dados.atletaOuro.tres_ideal)))}`}>
+                      {calcularPercentualAtingimento(dados.mediaDadosTecnicos.arremesso_tres, Number(dados.atletaOuro.tres_ideal)).toFixed(0)}%
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
+                  <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded">
                     <div>Arremesso Livre</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.arremesso_livre.toFixed(1)}%</div>
                     <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.tiro_ideal).toFixed(1)}%</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getCorPercentual(calcularPercentualAtingimento(dados.mediaDadosTecnicos.arremesso_livre, Number(dados.atletaOuro.tiro_ideal)))}`}>
+                      {calcularPercentualAtingimento(dados.mediaDadosTecnicos.arremesso_livre, Number(dados.atletaOuro.tiro_ideal)).toFixed(0)}%
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
+                  <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded">
                     <div>Assistências</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.assistencias.toFixed(1)}%</div>
                     <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.assistencia_ideal).toFixed(1)}%</div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${getCorPercentual(calcularPercentualAtingimento(dados.mediaDadosTecnicos.assistencias, Number(dados.atletaOuro.assistencia_ideal)))}`}>
+                      {calcularPercentualAtingimento(dados.mediaDadosTecnicos.assistencias, Number(dados.atletaOuro.assistencia_ideal)).toFixed(0)}%
+                    </div>
                   </div>
                 </div>
 
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <h5 className="font-medium text-blue-800 mb-2">Dados Físicos - Padrão Ouro</h5>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Altura Ideal:</span>
-                      <span className="ml-2 font-medium">{Number(dados.atletaOuro.altura_ideal).toFixed(2)}m</span>
+                  <h5 className="font-medium text-blue-800 mb-2">Comparação Física</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Altura:</span>
+                      <span className="font-medium">
+                        {dados.mediaDadosFisicos.altura.toFixed(2)}m vs {Number(dados.atletaOuro.altura_ideal).toFixed(2)}m
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Peso Ideal:</span>
-                      <span className="ml-2 font-medium">{Number(dados.atletaOuro.peso_ideal).toFixed(1)}kg</span>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Peso:</span>
+                      <span className="font-medium">
+                        {dados.mediaDadosFisicos.peso.toFixed(1)}kg vs {Number(dados.atletaOuro.peso_ideal).toFixed(1)}kg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                  <h5 className="font-medium text-green-800 mb-2">Interpretação & Objetivos</h5>
+                  <div className="space-y-2 text-sm text-green-700">
+                    <p>
+                      <strong>Categoria:</strong> {dados.mediaDadosFisicos.idade <= 14 
+                        ? "Sub-15 - Foco no desenvolvimento técnico e crescimento físico."
+                        : "Sub-18 - Refinamento técnico e condicionamento físico avançado."
+                      }
+                    </p>
+                    <div className="mt-3">
+                      <strong>Próximos Passos:</strong>
+                      <ul className="list-disc list-inside mt-1 space-y-1">
+                        {dados.mediaDadosTecnicos.tiro_livre < Number(dados.atletaOuro.livre_ideal) && (
+                          <li>Melhorar precisão no tiro livre (meta: {Number(dados.atletaOuro.livre_ideal)}%)</li>
+                        )}
+                        {dados.mediaDadosTecnicos.arremesso_tres < Number(dados.atletaOuro.tres_ideal) && (
+                          <li>Desenvolver arremesso de 3 pontos (meta: {Number(dados.atletaOuro.tres_ideal)}%)</li>
+                        )}
+                        {dados.mediaDadosFisicos.altura < Number(dados.atletaOuro.altura_ideal) && (
+                          <li>Continuar desenvolvimento físico (altura ideal: {Number(dados.atletaOuro.altura_ideal).toFixed(2)}m)</li>
+                        )}
+                      </ul>
                     </div>
                   </div>
                 </div>
