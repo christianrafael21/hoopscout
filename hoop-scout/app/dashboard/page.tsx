@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Footer } from "@/components/footer"
 import Link from "next/link"
 import { User } from "@/app/models/User.model"
+import ExportarRelatorio from "../components/exportar-relatorio"
 import { Athlete } from "@/app/models/Athlete.model"
 
 export default function DashboardPage() {
@@ -299,6 +300,13 @@ export default function DashboardPage() {
                                 Avaliar Atleta
                               </Button>
                             )}
+                            <ExportarRelatorio 
+                              idAtleta={athlete.userId}
+                              tipoRelatorio="estatisticas"
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600 hover:text-green-800"
+                            />
                           </div>
                         </TableCell>
                       </TableRow>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NavbarLogged } from "@/app/components/navbar-logged";
 import Footer from "@/app/components/footer";
+import ExportarRelatorio from '@/app/components/exportar-relatorio';
 
 async function getAvaliacaoDetalhes(idAtleta: number, idAvaliacao: number): Promise<{
   avaliacao: Avaliacao | undefined;
@@ -72,9 +73,18 @@ export default async function DetalhesAvaliacaoPage({
               Realizada em {formatarData(avaliacao.data)}
             </p>
           </div>
-          <Link href={`/athlete/rating/${params.id}`}>
-            <Button variant="outline">Voltar</Button>
-          </Link>
+          <div className="flex gap-3">
+            <ExportarRelatorio 
+              idAvaliacao={avaliacao.id_avaliacao}
+              tipoRelatorio="avaliacao"
+              variant="default"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            />
+            <Link href={`/athlete/rating/${params.id}`}>
+              <Button variant="outline">Voltar</Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
