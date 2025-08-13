@@ -47,6 +47,10 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
   useEffect(() => {
     async function fetchComparacaoData() {
       try {
+        console.log(`[DEBUG COMPARACAO] Iniciando busca para atleta ${idAtleta}`);
+        setLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('jwtToken');
         if (!token) {
           throw new Error('Token não encontrado');
@@ -57,14 +61,20 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log(`[DEBUG COMPARACAO] Status da resposta: ${avaliacoesResponse.status}`);
+
         if (!avaliacoesResponse.ok) {
-          throw new Error('Erro ao buscar avaliações');
+          const errorText = await avaliacoesResponse.text();
+          console.log(`[DEBUG COMPARACAO] Erro na resposta:`, errorText);
+          throw new Error(`Erro ao buscar avaliações: ${avaliacoesResponse.status}`);
         }
 
         const avaliacoes = await avaliacoesResponse.json();
+        console.log(`[DEBUG COMPARACAO] Avaliações recebidas:`, avaliacoes);
 
         if (avaliacoes.length === 0) {
           setError('Atleta não possui avaliações para comparação');
+          setLoading(false);
           return;
         }
 
@@ -132,7 +142,7 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
             console.log(`[DEBUG] Atleta ouro encontrado:`, atletaOuro);
           } else {
             const errorText = await atletaOuroResponse.text();
-            console.log(`[DEBUG] Erro na resposta:`, errorText);
+            console.log(`[DEBUG] Erro na resposta atleta ouro:`, errorText);
           }
 
           setDados({
@@ -140,7 +150,8 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
             mediaDadosTecnicos,
             atletaOuro
           });
-        } catch {
+        } catch (error) {
+          console.log(`[DEBUG] Erro ao buscar atleta ouro:`, error);
           // Se não encontrar atleta ouro, ainda mostra os dados do atleta
           setDados({
             mediaDadosFisicos,
@@ -148,9 +159,10 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
           });
         }
 
+        setLoading(false);
       } catch (error) {
+        console.error(`[DEBUG COMPARACAO] Erro geral:`, error);
         setError(error instanceof Error ? error.message : 'Erro desconhecido');
-      } finally {
         setLoading(false);
       }
     }

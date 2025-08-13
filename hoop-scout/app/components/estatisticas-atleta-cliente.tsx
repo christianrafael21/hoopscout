@@ -67,29 +67,44 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
     console.log(`[DEBUG] Processando avaliação:`, avaliacao);
     if (avaliacao.dados_fisicos) {
       console.log(`[DEBUG] Dados físicos da avaliação:`, avaliacao.dados_fisicos);
-      acc.idade += avaliacao.dados_fisicos.idade || 0;
-      acc.altura += avaliacao.dados_fisicos.altura || 0;
-      acc.peso += avaliacao.dados_fisicos.peso || 0;
+      console.log(`[DEBUG] Tipos: idade=${typeof avaliacao.dados_fisicos.idade}, altura=${typeof avaliacao.dados_fisicos.altura}, peso=${typeof avaliacao.dados_fisicos.peso}`);
+      
+      if (avaliacao.dados_fisicos.idade && !isNaN(Number(avaliacao.dados_fisicos.idade))) {
+        acc.idade += Number(avaliacao.dados_fisicos.idade);
+      }
+      if (avaliacao.dados_fisicos.altura && !isNaN(Number(avaliacao.dados_fisicos.altura))) {
+        acc.altura += Number(avaliacao.dados_fisicos.altura);
+      }
+      if (avaliacao.dados_fisicos.peso && !isNaN(Number(avaliacao.dados_fisicos.peso))) {
+        acc.peso += Number(avaliacao.dados_fisicos.peso);
+      }
+    } else {
+      console.log(`[DEBUG] Avaliação sem dados físicos`);
     }
     return acc;
   }, { idade: 0, altura: 0, peso: 0 });
 
   console.log(`[DEBUG] Soma dos dados físicos:`, somaDadosFisicos);
 
-  // Contar quantas avaliações têm dados físicos válidos
-  const avaliacoesComDadosFisicos = avaliacoes.filter((av: Avaliacao) => 
-    av.dados_fisicos && 
-    av.dados_fisicos.idade && 
-    av.dados_fisicos.altura && 
-    av.dados_fisicos.peso
+  // Contar quantas avaliações têm dados físicos válidos para cada campo
+  const avaliacoesComIdade = avaliacoes.filter((av: Avaliacao) => 
+    av.dados_fisicos && av.dados_fisicos.idade && !isNaN(Number(av.dados_fisicos.idade))
+  ).length;
+  
+  const avaliacoesComAltura = avaliacoes.filter((av: Avaliacao) => 
+    av.dados_fisicos && av.dados_fisicos.altura && !isNaN(Number(av.dados_fisicos.altura))
+  ).length;
+  
+  const avaliacoesComPeso = avaliacoes.filter((av: Avaliacao) => 
+    av.dados_fisicos && av.dados_fisicos.peso && !isNaN(Number(av.dados_fisicos.peso))
   ).length;
 
-  console.log(`[DEBUG] Avaliações com dados físicos válidos: ${avaliacoesComDadosFisicos}/${avaliacoes.length}`);
+  console.log(`[DEBUG] Contadores: idade=${avaliacoesComIdade}, altura=${avaliacoesComAltura}, peso=${avaliacoesComPeso}/${avaliacoes.length}`);
 
   const mediaDadosFisicos = {
-    idade: avaliacoesComDadosFisicos > 0 ? Math.round(somaDadosFisicos.idade / avaliacoesComDadosFisicos) : 0,
-    altura: avaliacoesComDadosFisicos > 0 ? Number((somaDadosFisicos.altura / avaliacoesComDadosFisicos).toFixed(2)) : 0,
-    peso: avaliacoesComDadosFisicos > 0 ? Number((somaDadosFisicos.peso / avaliacoesComDadosFisicos).toFixed(2)) : 0
+    idade: avaliacoesComIdade > 0 ? Math.round(somaDadosFisicos.idade / avaliacoesComIdade) : 0,
+    altura: avaliacoesComAltura > 0 ? Number((somaDadosFisicos.altura / avaliacoesComAltura).toFixed(2)) : 0,
+    peso: avaliacoesComPeso > 0 ? Number((somaDadosFisicos.peso / avaliacoesComPeso).toFixed(2)) : 0
   };
 
   console.log(`[DEBUG] Média dos dados físicos calculada:`, mediaDadosFisicos);
@@ -243,14 +258,51 @@ export default function EstatisticasAtletaCliente({ idAtleta }: { idAtleta: numb
                   {estatisticas.avaliacoes.length > 0 
                     ? (() => {
                         try {
-                          // Ordenar avaliações por data decrescente para pegar a mais recente
-                          const avaliacaoMaisRecente = [...estatisticas.avaliacoes].sort((a, b) => 
-                            new Date(b.data_avaliacao).getTime() - new Date(a.data_avaliacao).getTime()
-                          )[0];
+                          // Buscar a avaliação mais recente com data válida
+                          const avaliacoesComData = estatisticas.avaliacoes.filter(av => av.data_avaliacao);
                           
-                          const data = new Date(avaliacaoMaisRecente.data_avaliacao);
-                          return isNaN(data.getTime()) ? 'Data inválida' : data.toLocaleDateString('pt-BR');
-                        } catch {
+                          if (avaliacoesComData.length === 0) {
+                            return 'Sem data disponível';
+                          }
+                          
+                          const avaliacaoMaisRecente = [...avaliacoesComData].sort((a, b) => {
+                            const dateA = new Date(a.data_avaliacao);
+                            const dateB = new Date(b.data_avaliacao);
+                            return dateB.getTime() - dateA.getTime();
+                          })[0];
+                          
+                          console.log(`[DEBUG] Data da avaliação mais recente (raw):`, avaliacaoMaisRecente.data_avaliacao);
+                          
+                          const dataStr = avaliacaoMaisRecente.data_avaliacao;
+                          let data: Date;
+                          
+                          // Tentar diferentes formatos de data
+                          if (dataStr.includes('T')) {
+                            // Formato ISO: 2023-12-15T10:30:00.000Z
+                            data = new Date(dataStr);
+                          } else if (dataStr.includes('-')) {
+                            // Formato: 2023-12-15 ou YYYY-MM-DD
+                            const partes = dataStr.split(' ')[0]; // Pega apenas a parte da data
+                            data = new Date(partes + 'T00:00:00');
+                          } else if (dataStr.includes('/')) {
+                            // Formato: DD/MM/YYYY
+                            const [dia, mes, ano] = dataStr.split('/');
+                            data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                          } else {
+                            // Parsing direto
+                            data = new Date(dataStr);
+                          }
+                          
+                          console.log(`[DEBUG] Data parseada:`, data);
+                          console.log(`[DEBUG] Data válida?`, !isNaN(data.getTime()));
+                          
+                          if (isNaN(data.getTime())) {
+                            return `Data inválida: ${dataStr}`;
+                          }
+                          
+                          return data.toLocaleDateString('pt-BR');
+                        } catch (error) {
+                          console.error(`[DEBUG] Erro ao processar data:`, error);
                           return 'Erro na data';
                         }
                       })()
