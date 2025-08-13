@@ -6,26 +6,31 @@ import { ShoppingBasketIcon as Basketball } from "lucide-react"
 import { ChangeEvent, FormEvent, useState } from "react";
 
 type FormData = {
-  nome: string;
+  primeiro_nome: string;
+  ultimo_nome: string;
   email: string;
   senha: string;
   confirmarSenha: string;
+  tipo: 'ADMIN' | 'COACH' | 'ATLETA';
 };
 
 type Errors = {
-  nome?: string;
+  primeiro_nome?: string;
+  ultimo_nome?: string;
   email?: string;
   senha?: string;
   confirmarSenha?: string;
-  role?: string;
+  tipo?: string;
 };
 
 export default function CadastroPage() {
   const [formData, setFormData] = useState<FormData>({
-    nome: "",
+    primeiro_nome: "",
+    ultimo_nome: "",
     email: "",
     senha: "",
     confirmarSenha: "",
+    tipo: "ATLETA", // Por padrão, novos usuários são atletas
   });
 
   const [errors, setErrors] = useState<Errors>({});
@@ -46,13 +51,22 @@ export default function CadastroPage() {
 
   const verValores = async (e: FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    let newErrors: Errors = {};
-    if (!formData.nome) newErrors.nome = "Nome é obrigatório";
+    const newErrors: Errors = {};
+    if (!formData.primeiro_nome) newErrors.primeiro_nome = "Nome é obrigatório";
+    if (!formData.ultimo_nome) newErrors.ultimo_nome = "Sobrenome é obrigatório";
     if (!formData.email) newErrors.email = "E-mail é obrigatório";
     else if (!validateEmail(formData.email)) newErrors.email = "E-mail inválido";
-    if (!formData.senha) newErrors.senha = "Senha é obrigatória";
-    if (!formData.confirmarSenha) newErrors.confirmarSenha = "Confirmação de senha é obrigatória";
-    else if (formData.senha !== formData.confirmarSenha) newErrors.confirmarSenha = "As senhas não coincidem";
+    if (!formData.senha) {
+      newErrors.senha = "Senha é obrigatória";
+    } else if (formData.senha.length < 8) {
+      newErrors.senha = "Senha deve ter no mínimo 8 caracteres";
+    }
+
+    if (!formData.confirmarSenha) {
+      newErrors.confirmarSenha = "Confirmação de senha é obrigatória";
+    } else if (formData.senha !== formData.confirmarSenha) {
+      newErrors.confirmarSenha = "As senhas não coincidem";
+    }
 
     setErrors(newErrors);
 
@@ -66,9 +80,11 @@ export default function CadastroPage() {
     setLoading(true);
 
     const payload = {
-      name: formData.nome,
+      primeiro_nome: formData.primeiro_nome,
+      ultimo_nome: formData.ultimo_nome,
       email: formData.email,
-      password: formData.senha
+      senha: formData.senha,
+      tipo: formData.tipo
     }
     try {
       const response = await fetch("http://localhost:8083/signup", {
@@ -82,10 +98,12 @@ export default function CadastroPage() {
       if (response.ok) {
         setSuccess(true);
         setFormData({
-          nome: "",
+          primeiro_nome: "",
+          ultimo_nome: "",
           email: "",
           senha: "",
           confirmarSenha: "",
+          tipo: "ATLETA",
         });
         setTimeout(() => {
           handleRedirectLogin()
@@ -122,13 +140,23 @@ export default function CadastroPage() {
         <div className="w-full max-w-md space-y-4">
           <Input
             type="text"
-            name="nome"
-            placeholder="nome completo"
+            name="primeiro_nome"
+            placeholder="nome"
             className="h-12 bg-white border-0 text-black text-lg rounded-none"
             onChange={handleChange}
-            value={formData.nome}
+            value={formData.primeiro_nome}
           />
-          {errors.nome && <p className="text-red-500 text-sm">{errors.nome}</p>}
+          {errors.primeiro_nome && <p className="text-red-500 text-sm">{errors.primeiro_nome}</p>}
+
+          <Input
+            type="text"
+            name="ultimo_nome"
+            placeholder="sobrenome"
+            className="h-12 bg-white border-0 text-black text-lg rounded-none"
+            onChange={handleChange}
+            value={formData.ultimo_nome}
+          />
+          {errors.ultimo_nome && <p className="text-red-500 text-sm">{errors.ultimo_nome}</p>}
 
           <Input
             type="email"

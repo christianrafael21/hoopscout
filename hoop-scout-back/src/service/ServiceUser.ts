@@ -1,82 +1,72 @@
-import { Users } from "../entity/User";
+import { Users, UserType } from "../entity/User";
 import * as userRepository from "../repositories/RepositoryUser";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-//----------------SERVICES CHAMADAS PELOS CONTROLLERS --------------------
-export async function getUserInfo(id: number): Promise<Users> {
-    const users: Users[] = await userRepository.getUserById(id);
+export async function getUserInfo(id_usuario: number): Promise<Users> {
+    const users: Users[] = await userRepository.getUserById(id_usuario);
     
-    if(!users.length) throw { type: 'Bad Request', message: 'Usuario inexistente' };
+    if(!users.length) throw { type: 'Bad Request', message: 'Usuário inexistente' };
 
     return users[0];
 }
 
-export async function signup(userInfo: Omit<Users,'id'>): Promise<void> {
+export async function signup(userInfo: Omit<Users,'id_usuario'>): Promise<void> {
     const existEmail: Users[] = await userRepository.existEmail(userInfo.email); 
-    if(existEmail.length) throw { type: 'Conflit', message: 'Email de usuario ja cadastrado' };
+    if(existEmail.length) throw { type: 'Conflict', message: 'Email de usuário já cadastrado' };
 
-    const saltRounds = 10; //maior, mais seguro, porem mais lento
-    const encryptPassword: string = bcrypt.hashSync(userInfo.password, saltRounds);
-    userInfo.password = encryptPassword;
-
-    const currentDate = new Date();
-    const currentDateBrazil = new Date(currentDate.getTime() - 3 * 60 * 60 * 1000);
-    userInfo.createdAt = currentDateBrazil;
-    userInfo.role = 'user';
+    const saltRounds = 10;
+    const encryptPassword: string = bcrypt.hashSync(userInfo.senha, saltRounds);
+    userInfo.senha = encryptPassword;
 
     await userRepository.createUser(userInfo);
 }
 
-export async function login(userInfo: Omit<Users,'id | createdAt | name'>): Promise<string> {
+export async function login(userInfo: { email: string; senha: string }): Promise<string> {
     const existEmail: Users[] = await userRepository.existEmail(userInfo.email);  
-    if(!existEmail.length) throw { type: 'Unauthorized', message: 'Email ou senha invalidos' };
+    if(!existEmail.length) throw { type: 'Unauthorized', message: 'Email ou senha inválidos' };
 
-    const descryptPassword = await bcrypt.compareSync(userInfo.password, existEmail[0].password);
-    if(!descryptPassword) throw { type: 'Unauthorized', message: 'Email ou senha invalidos' };
+    const descryptPassword = await bcrypt.compareSync(userInfo.senha, existEmail[0].senha);
+    if(!descryptPassword) throw { type: 'Unauthorized', message: 'Email ou senha inválidos' };
 
-    const token: string = gerateToken(existEmail[0].id, existEmail[0].email, existEmail[0].role);
+    const token: string = gerateToken(existEmail[0].id_usuario, existEmail[0].email, existEmail[0].tipo);
 
     return token;
 }
 
-export async function editProfile(userInfo: Omit<Users,'id | createdAt'>, id: number): Promise<void> {
-    const users: Users[] = await userRepository.getUserById(id);
-    if(!users.length) throw { type: 'Not Found', message: 'Usuario nao encontrado' };
+export async function editProfile(userInfo: Partial<Omit<Users,'id_usuario' | 'tipo'>>, id_usuario: number): Promise<void> {
+    const users: Users[] = await userRepository.getUserById(id_usuario);
+    if(!users.length) throw { type: 'Not Found', message: 'Usuário não encontrado' };
 
-    if(!userInfo.password) userInfo.password = users[0].password;
-    else {
-        const saltRounds = 10; //maior, mais seguro, porem mais lento
-        const encryptPassword: string = bcrypt.hashSync(userInfo.password, saltRounds);
-        userInfo.password = encryptPassword;
+    const updatedUserInfo = { ...userInfo };
+
+    // Se nova senha fornecida, criptografa
+    if (updatedUserInfo.senha) {
+        const saltRounds = 10;
+        updatedUserInfo.senha = bcrypt.hashSync(updatedUserInfo.senha, saltRounds);
     }
-    
-    if(!userInfo.name) userInfo.name = users[0].name;
-    if(!userInfo.email) userInfo.email = users[0].email;
 
-    await userRepository.editProfile(userInfo, id);
+    // Mantém os campos existentes se não fornecidos
+    if (!updatedUserInfo.email) updatedUserInfo.email = users[0].email;
+    if (!updatedUserInfo.primeiro_nome) updatedUserInfo.primeiro_nome = users[0].primeiro_nome;
+    if (!updatedUserInfo.ultimo_nome) updatedUserInfo.ultimo_nome = users[0].ultimo_nome;
+
+    await userRepository.editProfile(updatedUserInfo, id_usuario);
 }
 
-//----------------FUNCOES DE LOGICA CHAMADAS PELOS SERVICES --------------------
+function gerateToken(id_usuario: number, email: string, tipo: UserType): string {
+    const SECRET: string = process.env.TOKEN_SECRET_KEY ?? 'default_secret';
+    const EXPERIES_IN: string = process.env.EXPERIES_IN ?? '1h';
 
-function gerateToken(userId: number,email: string, role: string): string {
-    const SECRET: string = process.env.TOKEN_SECRET_KEY ?? '';
-    const EXPERIES_IN: string | undefined = process.env.EXPERIES_IN
+    const payload = {
+        id_usuario,
+        email,
+        tipo
+    };
 
-    const level: number = role === 'user' ? 1 : (role === 'coach' ? 3 : 2);
-
-    const payload: object = {
-        userId, 
-        email,  
-        role,
-        level
-    }
-
-    const jwtConfig: object = { 
+    const jwtConfig = { 
         expiresIn: EXPERIES_IN
-    }
+    };
 
-    const token: string = jwt.sign(payload,SECRET,jwtConfig);
-
-    return token;
+    return jwt.sign(payload, SECRET, jwtConfig);
 }

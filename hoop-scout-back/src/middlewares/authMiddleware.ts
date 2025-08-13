@@ -13,8 +13,8 @@ export async function validateTokenAuth(req: Request, res: Response, next: NextF
 
     try {
         const SECRET: string = process.env.TOKEN_SECRET_KEY ?? '';
-        const { userId } = jwt.verify(token,SECRET) as { userId: number}
-        const user: Users[] = await userRepository.getUserById(userId);
+        const { id_usuario } = jwt.verify(token, SECRET) as { id_usuario: number, tipo: string }
+        const user: Users[] = await userRepository.getUserById(id_usuario);
         if(!user.length) throw { type: "Unauthorized", message: "Acesso bloqueado, autorização necessária"};
         res.locals.user = user[0];
         next();

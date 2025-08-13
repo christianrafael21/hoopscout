@@ -1,5 +1,5 @@
 export interface User {
-    userId: number,
+    id_usuario: number,
     email: string,
-    role: 'user' | 'coach' | 'athlete',
+    tipo: 'ADMIN' | 'COACH' | 'ATLETA',
 }

@@ -28,7 +28,7 @@ export default function LoginPage() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, senha: password }),
     });
 
     if (response.ok) {
@@ -46,15 +46,15 @@ export default function LoginPage() {
         console.error(erro);
       }
       console.log(user)
-      switch (user.role) {
-        case 'user':
-          window.location.href = '/about' ; 
+      switch (user.tipo) {
+        case 'ADMIN':
+          window.location.href = '/about'; 
           break;
-        case 'coach':
+        case 'COACH':
           window.location.href = '/dashboard'; 
           break;
-        case 'athlete':
-          window.location.href = '/athlete/statistics/' + user.userId; 
+        case 'ATLETA':
+          window.location.href = '/athlete/statistics/' + user.id_usuario; 
           break;
         default:
           alert("Erro ao capturar usuario")

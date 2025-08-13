@@ -13,9 +13,9 @@ export async function validateTokenCoachAuth(req: Request, res: Response, next: 
 
     try {
         const SECRET: string = process.env.TOKEN_SECRET_KEY ?? '';
-        const { userId, role } = jwt.verify(token,SECRET) as { role: string, userId: number }
-        const user: Users[] = await userRepository.getUserById(userId);
-        if(role !== 'coach') { 
+        const { id_usuario, tipo } = jwt.verify(token, SECRET) as { id_usuario: number, tipo: string }
+        const user: Users[] = await userRepository.getUserById(id_usuario);
+        if(tipo !== 'COACH') { 
             throw { type: "Unauthorized", message: "Acesso bloqueado, autorização necessária"};
         }
         res.locals.user = user[0];

@@ -18,32 +18,33 @@ import { Button } from "@/components/ui/button"
 import { Footer } from "@/components/footer"
 import Link from "next/link"
 import { User } from "@/app/models/User.model"
+import { Athlete } from "@/app/models/Athlete.model"
 
 export default function DashboardPage() {
   const [expandedRow, setExpandedRow] = useState<number | null>(0)
   const [role, setRole] = useState<string | null>(null)
-  const [athletes, setAthletes] = useState<any[]>([])
+  const [athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [itemsPerPage] = useState<number>(10)
 
   // Formato dos dados para gráfico de radar
-  const formatRadarData = (athlete: any) => {
+  const formatRadarData = (athlete: Athlete) => {
     if (!athlete) return []
 
-    // Convertendo valores de string para número onde necessário
-    const formatPercentage = (val: string) => {
-      if (!val || typeof val !== 'string') return 0
-      return Number(val.slice(0, -1)) / 10 // Divide por 10 para ajustar escala
+    // Convertendo valores para número onde necessário
+    const formatValue = (val: number | null) => {
+      if (!val) return 0
+      return val / 10 // Divide por 10 para ajustar escala
     }
 
     return [
       { subject: "Física", A: athlete.age ? (athlete.age / 4) : 0 }, // Normalizar idade
-      { subject: "Habilidades", A: formatPercentage(athlete.shortShot) },
-      { subject: "Arremesso", A: formatPercentage(athlete.longShot) },
+      { subject: "Habilidades", A: formatValue(athlete.shortShot) },
+      { subject: "Arremesso", A: formatValue(athlete.longShot) },
       { subject: "Chances", A: athlete.chances ? (Number(athlete.chances) / 10) : 0 },
-      { subject: "Aptidão", A: formatPercentage(athlete.freeThrow) },
+      { subject: "Aptidão", A: formatValue(athlete.freeThrow) },
     ]
   }
 
@@ -64,11 +65,13 @@ export default function DashboardPage() {
         }
 
         const user: User = JSON.parse(userString)
-        setRole(user.role)
+        setRole(user.tipo)
 
         // Fetch athletes based on user role - using proper authentication
         let athletesResponse
-        if (user.role === 'coach') {
+        console.log('Tipo de usuário:', user.tipo)
+        if (user.tipo === 'COACH') {
+          console.log('Buscando todos os atletas como coach')
           athletesResponse = await fetch('http://localhost:8083/all/athletes', {
             method: 'GET',
             headers: {
@@ -94,19 +97,25 @@ export default function DashboardPage() {
 
         // Parse athlete data
         const athletesData = await athletesResponse.json()
+        console.log('Dados recebidos da API:', athletesData)
 
         // Handle both single athlete and array of athletes
         let formattedAthletes
-        if (user.role === 'coach') {
+        if (user.tipo === 'COACH') {
           formattedAthletes = Array.isArray(athletesData) ? athletesData : [athletesData]
         } else {
           formattedAthletes = [athletesData] // Single athlete for user role 'athlete'
         }
 
+        console.log('Atletas formatados:', formattedAthletes)
+
         // For each athlete, fetch probability data if available
         const athletesWithProbability = await Promise.all(
           formattedAthletes.map(async (athlete) => {
-            if (!athlete || !athlete.id) return athlete
+            if (!athlete || !athlete.id) {
+              console.log('Atleta inválido:', athlete)
+              return athlete
+            }
 
             try {
               // Fetch probability for this athlete
@@ -123,23 +132,23 @@ export default function DashboardPage() {
                 return {
                   ...athlete,
                   chances: probabilityData.probability || 'N/A',
-                  // Add formatted date if not present
-                  evaluationDate: athlete.evaluationDate || new Date().toLocaleDateString('pt-BR')
+                  // Manter a data de avaliação que veio do backend, ou usar uma padrão se não houver
+                  evaluationDate: athlete.evaluationDate || 'N/A'
                 }
               }
 
               return {
                 ...athlete,
                 chances: 'N/A',
-                // Add formatted date if not present
-                evaluationDate: athlete.evaluationDate || new Date().toLocaleDateString('pt-BR')
+                // Manter a data de avaliação que veio do backend, ou usar uma padrão se não houver
+                evaluationDate: athlete.evaluationDate || 'N/A'
               }
             } catch (error) {
               console.error('Error fetching probability:', error)
               return {
                 ...athlete,
                 chances: 'N/A',
-                evaluationDate: athlete.evaluationDate || new Date().toLocaleDateString('pt-BR')
+                evaluationDate: athlete.evaluationDate || 'N/A'
               }
             }
           })
@@ -167,17 +176,17 @@ export default function DashboardPage() {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
 
   // Calculate average from athlete stats
-  const calculateAverage = (athlete: any) => {
+  const calculateAverage = (athlete: Athlete) => {
     if (!athlete) return 'N/A'
 
-    const formatPercentage = (val: string) => {
-      if (!val || typeof val !== 'string') return 0
-      return Number(val.slice(0, -1))
+    const formatValue = (val: number | null) => {
+      if (!val) return 0
+      return val
     }
 
-    const shortShot = formatPercentage(athlete.shortShot)
-    const longShot = formatPercentage(athlete.longShot)
-    const freeThrow = formatPercentage(athlete.freeThrow)
+    const shortShot = formatValue(athlete.shortShot)
+    const longShot = formatValue(athlete.longShot)
+    const freeThrow = formatValue(athlete.freeThrow)
 
     // Simple average of available shooting percentages
     const values = [shortShot, longShot, freeThrow].filter(val => val > 0)
@@ -198,7 +207,7 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold">Atletas Cadastrados</h2>
               <p className="text-gray-500">Gerencie e acompanhe o desenvolvimento dos atletas</p>
             </div>
-            {role === 'coach' && (
+            {role === 'COACH' && (
               <div className="flex gap-4 items-center">
                 <Input type="search" placeholder="Buscar atleta..." className="max-w-xs" />
               </div>
@@ -257,25 +266,40 @@ export default function DashboardPage() {
                         <TableCell>{calculateAverage(athlete)}</TableCell>
                         <TableCell>{athlete.evaluationDate || 'N/A'}</TableCell>
                         <TableCell className="text-right">
-                          <Link href={`/athlete/statistics/${athlete.userId}`} passHref>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-blue-600 hover:text-blue-800"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Ver Estatísticas
-                            </Button>
-                            {role === 'coach' && (
+                          <div className="flex gap-2 justify-end">
+                            <Link href={`/athlete/statistics/${athlete.userId}`} passHref>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-800"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Ver Estatísticas
+                              </Button>
+                            </Link>
+                            <Link href={`/athlete/comparison/${athlete.userId}`} passHref>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-yellow-600 hover:text-yellow-800"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                🏆 Comparar com Ouro
+                              </Button>
+                            </Link>
+                            {role === 'COACH' && (
                               <Button 
                                 className="text-blue-600 hover:text-blue-800" 
-                                onClick={() => (window.location.href = `/athlete/rating/${athlete.userId}`)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/athlete/rating/${athlete.userId}`;
+                                }}
                               >
                                 <UserPlus className="mr-2 h-4 w-4" />
                                 Avaliar Atleta
                               </Button>
                             )}
-                          </Link>
+                          </div>
                         </TableCell>
                       </TableRow>
                       {expandedRow === index && (
