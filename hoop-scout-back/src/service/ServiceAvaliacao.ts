@@ -4,6 +4,18 @@ import * as dadosFisicosRepository from "../repositories/RepositoryDadosFisicos"
 import * as dadosTecnicosRepository from "../repositories/RepositoryDadosTecnicos";
 import * as atletaOuroRepository from "../repositories/RepositoryAtletaOuro";
 
+// Função para determinar categoria de idade conforme regras do basquete
+function determinarCategoriaIdade(idade: number): number {
+    if (idade <= 8) return 8;
+    if (idade <= 10) return 10;
+    if (idade <= 12) return 12;
+    if (idade <= 14) return 14;
+    if (idade <= 15) return 15;
+    if (idade <= 17) return 17;
+    if (idade <= 18) return 18;
+    return 21; // Acima de 18 anos vai para categoria adulta (21)
+}
+
 export async function create(dados: Omit<Avaliacao, 'id_avaliacao' | 'nota_media' | 'dados_fisicos' | 'dados_tecnicos' | 'atleta_ouro'> & { id_atleta: number }, id_coach: number): Promise<number> {
     // Validar existência dos dados físicos e técnicos
     const dadosFisicos = await dadosFisicosRepository.getById(dados.id_dados_fisicos);
@@ -16,17 +28,32 @@ export async function create(dados: Omit<Avaliacao, 'id_avaliacao' | 'nota_media
         throw { type: 'Not Found', message: 'Dados técnicos não encontrados' };
     }
 
-    // Validar atleta ouro se fornecido
-    if (dados.id_atleta_ouro) {
-        const atletaOuro = await atletaOuroRepository.getById(dados.id_atleta_ouro);
+    // Determinar categoria de idade automaticamente baseada na idade dos dados físicos
+    const categoriaIdade = determinarCategoriaIdade(dadosFisicos.idade);
+    let id_atleta_ouro = dados.id_atleta_ouro;
+    
+    // Se não foi fornecido atleta ouro, tentar buscar automaticamente
+    if (!id_atleta_ouro) {
+        try {
+            const atletaOuro = await atletaOuroRepository.getByIdadeCategoria(categoriaIdade);
+            if (atletaOuro) {
+                id_atleta_ouro = atletaOuro.id_atleta_ouro;
+            }
+        } catch (error) {
+            console.log(`Atleta ouro não encontrado para categoria ${categoriaIdade}`);
+        }
+    } else {
+        // Validar atleta ouro se fornecido
+        const atletaOuro = await atletaOuroRepository.getById(id_atleta_ouro);
         if (!atletaOuro) {
             throw { type: 'Not Found', message: 'Atleta ouro não encontrado' };
         }
     }
 
-    // Criar avaliação
+    // Criar avaliação com o atleta ouro (se encontrado)
     const { id_atleta, ...dadosAvaliacao } = dados;
-    const id_avaliacao = await avaliacaoRepository.create(dadosAvaliacao);
+    const dadosComAtletaOuro = { ...dadosAvaliacao, id_atleta_ouro };
+    const id_avaliacao = await avaliacaoRepository.create(dadosComAtletaOuro);
 
     // Criar histórico
     const dataAtual = new Date();

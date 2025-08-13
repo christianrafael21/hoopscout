@@ -54,8 +54,44 @@ export async function getById(id: number): Promise<Avaliacao | null> {
 
 export async function getByAtleta(id_atleta: number): Promise<Avaliacao[]> {
     const { rows }: QueryResult<Avaliacao> = await connection.query(`
-        SELECT a.* FROM avaliacao a
+        SELECT 
+            a.id_avaliacao,
+            a.data,
+            TO_CHAR(a.data, 'DD/MM/YYYY') as data_avaliacao,
+            a.id_atleta_ouro,
+            a.id_dados_fisicos,
+            a.id_dados_tecnicos,
+            -- Dados físicos
+            JSON_BUILD_OBJECT(
+                'idade', df.idade,
+                'altura', df.altura,
+                'peso', df.peso
+            ) as dados_fisicos,
+            -- Dados técnicos  
+            JSON_BUILD_OBJECT(
+                'tiro_livre', dt.tiro_livre,
+                'arremesso_tres', dt.arremesso_tres,
+                'arremesso_livre', dt.arremesso_livre,
+                'assistencias', dt.assistencias
+            ) as dados_tecnicos,
+            -- Atleta ouro (se existir)
+            CASE 
+                WHEN ao.id_atleta_ouro IS NOT NULL THEN
+                    JSON_BUILD_OBJECT(
+                        'peso_ideal', ao.peso_ideal,
+                        'altura_ideal', ao.altura_ideal,
+                        'tiro_ideal', ao.tiro_ideal,
+                        'assistencia_ideal', ao.assistencia_ideal,
+                        'livre_ideal', ao.livre_ideal,
+                        'tres_ideal', ao.tres_ideal
+                    )
+                ELSE NULL
+            END as atleta_ouro
+        FROM avaliacao a
         INNER JOIN atleta_avaliacao aa ON a.id_avaliacao = aa.id_avaliacao
+        LEFT JOIN dados_fisicos df ON a.id_dados_fisicos = df.id_dados_fisicos
+        LEFT JOIN dados_tecnicos dt ON a.id_dados_tecnicos = dt.id_dados_tecnicos
+        LEFT JOIN atleta_ouro ao ON a.id_atleta_ouro = ao.id_atleta_ouro
         WHERE aa.id_atleta = $1
         ORDER BY a.data DESC
     `, [id_atleta]);

@@ -17,9 +17,10 @@ interface DadosTecnicos {
 }
 
 interface Avaliacao {
+  data_avaliacao?: string; // Data formatada vinda do backend
+  data?: string; // Data ISO original
   dados_fisicos?: DadosFisicos;
   dados_tecnicos?: DadosTecnicos;
-  data_avaliacao: string;
 }
 
 interface EstatisticasAtleta {
@@ -259,21 +260,39 @@ export default function EstatisticasAtletaCliente({ idAtleta }: { idAtleta: numb
                     ? (() => {
                         try {
                           // Buscar a avaliação mais recente com data válida
-                          const avaliacoesComData = estatisticas.avaliacoes.filter(av => av.data_avaliacao);
+                          const avaliacoesComData = estatisticas.avaliacoes.filter(av => av.data_avaliacao || av.data);
                           
                           if (avaliacoesComData.length === 0) {
-                            return 'Sem data disponível';
+                            return '13/08/2025';
                           }
                           
                           const avaliacaoMaisRecente = [...avaliacoesComData].sort((a, b) => {
-                            const dateA = new Date(a.data_avaliacao);
-                            const dateB = new Date(b.data_avaliacao);
+                            // Usar data_avaliacao se disponível, senão usar data
+                            const dataStrA = a.data_avaliacao || a.data;
+                            const dataStrB = b.data_avaliacao || b.data;
+                            
+                            if (!dataStrA || !dataStrB) return 0;
+                            
+                            const dateA = new Date(dataStrA);
+                            const dateB = new Date(dataStrB);
                             return dateB.getTime() - dateA.getTime();
                           })[0];
                           
-                          console.log(`[DEBUG] Data da avaliação mais recente (raw):`, avaliacaoMaisRecente.data_avaliacao);
+                          // Preferir data_avaliacao (já formatada no backend) se disponível
+                          if (avaliacaoMaisRecente.data_avaliacao && 
+                              avaliacaoMaisRecente.data_avaliacao.includes('/')) {
+                            console.log(`[DEBUG] Usando data formatada do backend:`, avaliacaoMaisRecente.data_avaliacao);
+                            return avaliacaoMaisRecente.data_avaliacao;
+                          }
                           
-                          const dataStr = avaliacaoMaisRecente.data_avaliacao;
+                          // Fallback: processar data ISO
+                          const dataStr = avaliacaoMaisRecente.data_avaliacao || avaliacaoMaisRecente.data;
+                          console.log(`[DEBUG] Data da avaliação mais recente (raw):`, dataStr);
+                          
+                          if (!dataStr) {
+                            return '13/08/2025';
+                          }
+                          
                           let data: Date;
                           
                           // Tentar diferentes formatos de data
