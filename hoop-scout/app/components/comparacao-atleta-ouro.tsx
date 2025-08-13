@@ -114,15 +114,16 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
         // Determinar a categoria de idade correta para buscar o atleta ouro
         const determinarCategoriaIdade = (idade: number): number => {
           // Categorias baseadas nas divisões comuns do basquete
-          if (idade <= 8) return 8;   // Mini (até 8 anos)
-          if (idade <= 10) return 10; // Pre-mini (9-10 anos)
-          if (idade <= 12) return 12; // Sub-12 (11-12 anos)
-          if (idade <= 14) return 14; // Sub-14 (13-14 anos)
-          if (idade <= 15) return 15; // Sub-15 (15 anos)
-          if (idade <= 17) return 17; // Sub-17 (16-17 anos)
-          if (idade <= 18) return 18; // Sub-18 (18 anos)
-          if (idade <= 21) return 21; // Sub-21 (19-21 anos)
-          return 21; // Para idades acima de 21, usar a categoria mais alta
+          // O atleta é comparado com a categoria ACIMA da sua idade
+          if (idade <= 7) return 8;   // Até 7 anos -> categoria Sub-8
+          if (idade <= 9) return 10;  // 8-9 anos -> categoria Sub-10  
+          if (idade <= 11) return 12; // 10-11 anos -> categoria Sub-12
+          if (idade <= 13) return 14; // 12-13 anos -> categoria Sub-14
+          if (idade <= 14) return 15; // 14 anos -> categoria Sub-15
+          if (idade <= 16) return 17; // 15-16 anos -> categoria Sub-17
+          if (idade <= 17) return 18; // 17 anos -> categoria Sub-18
+          if (idade <= 20) return 21; // 18-20 anos -> categoria Sub-21
+          return 21; // Para idades acima de 20, usar a categoria mais alta
         };
 
         const categoriaIdade = determinarCategoriaIdade(mediaDadosFisicos.idade);
@@ -177,22 +178,22 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
       {
         subject: 'Tiro Livre',
         Atleta: dados.mediaDadosTecnicos.tiro_livre,
-        AtletaOuro: dados.atletaOuro?.livre_ideal || 0
+        AtletaOuro: dados.atletaOuro ? Number(dados.atletaOuro.livre_ideal) : 0
       },
       {
         subject: 'Arremesso 3',
         Atleta: dados.mediaDadosTecnicos.arremesso_tres,
-        AtletaOuro: dados.atletaOuro?.tres_ideal || 0
+        AtletaOuro: dados.atletaOuro ? Number(dados.atletaOuro.tres_ideal) : 0
       },
       {
         subject: 'Arremesso Livre',
         Atleta: dados.mediaDadosTecnicos.arremesso_livre,
-        AtletaOuro: dados.atletaOuro?.tiro_ideal || 0
+        AtletaOuro: dados.atletaOuro ? Number(dados.atletaOuro.tiro_ideal) : 0
       },
       {
         subject: 'Assistências',
         Atleta: dados.mediaDadosTecnicos.assistencias,
-        AtletaOuro: dados.atletaOuro?.assistencia_ideal || 0
+        AtletaOuro: dados.atletaOuro ? Number(dados.atletaOuro.assistencia_ideal) : 0
       }
     ];
 
@@ -280,25 +281,25 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
                   <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
                     <div>Tiro Livre</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.tiro_livre.toFixed(1)}%</div>
-                    <div className="font-medium text-yellow-600">{dados.atletaOuro.livre_ideal.toFixed(1)}%</div>
+                    <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.livre_ideal).toFixed(1)}%</div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
                     <div>Arremesso de 3</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.arremesso_tres.toFixed(1)}%</div>
-                    <div className="font-medium text-yellow-600">{dados.atletaOuro.tres_ideal.toFixed(1)}%</div>
+                    <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.tres_ideal).toFixed(1)}%</div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
                     <div>Arremesso Livre</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.arremesso_livre.toFixed(1)}%</div>
-                    <div className="font-medium text-yellow-600">{dados.atletaOuro.tiro_ideal.toFixed(1)}%</div>
+                    <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.tiro_ideal).toFixed(1)}%</div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded">
                     <div>Assistências</div>
                     <div className="font-medium">{dados.mediaDadosTecnicos.assistencias.toFixed(1)}%</div>
-                    <div className="font-medium text-yellow-600">{dados.atletaOuro.assistencia_ideal.toFixed(1)}%</div>
+                    <div className="font-medium text-yellow-600">{Number(dados.atletaOuro.assistencia_ideal).toFixed(1)}%</div>
                   </div>
                 </div>
 
@@ -307,11 +308,11 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Altura Ideal:</span>
-                      <span className="ml-2 font-medium">{dados.atletaOuro.altura_ideal.toFixed(2)}m</span>
+                      <span className="ml-2 font-medium">{Number(dados.atletaOuro.altura_ideal).toFixed(2)}m</span>
                     </div>
                     <div>
                       <span className="text-gray-600">Peso Ideal:</span>
-                      <span className="ml-2 font-medium">{dados.atletaOuro.peso_ideal.toFixed(1)}kg</span>
+                      <span className="ml-2 font-medium">{Number(dados.atletaOuro.peso_ideal).toFixed(1)}kg</span>
                     </div>
                   </div>
                 </div>

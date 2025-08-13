@@ -132,7 +132,8 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
     avaliacoes: avaliacoes.map((av: Avaliacao) => ({
       dados_fisicos: av.dados_fisicos,
       dados_tecnicos: av.dados_tecnicos,
-      data_avaliacao: av.data_avaliacao
+      data_avaliacao: av.data_avaliacao,
+      data: av.data // Manter também a data original para casos onde data_avaliacao não estiver disponível
     })),
     mediaDadosFisicos,
     mediaDadosTecnicos
@@ -259,13 +260,18 @@ export default function EstatisticasAtletaCliente({ idAtleta }: { idAtleta: numb
                   {estatisticas.avaliacoes.length > 0 
                     ? (() => {
                         try {
+                          console.log(`[DEBUG] Todas as avaliações:`, estatisticas.avaliacoes);
+                          
                           // Buscar a avaliação mais recente com data válida
                           const avaliacoesComData = estatisticas.avaliacoes.filter(av => av.data_avaliacao || av.data);
+                          console.log(`[DEBUG] Avaliações com data:`, avaliacoesComData);
                           
                           if (avaliacoesComData.length === 0) {
-                            return '13/08/2025';
+                            console.log(`[DEBUG] Nenhuma avaliação com data encontrada`);
+                            return 'N/A';
                           }
                           
+                          // Ordenar por data e pegar a mais recente
                           const avaliacaoMaisRecente = [...avaliacoesComData].sort((a, b) => {
                             // Usar data_avaliacao se disponível, senão usar data
                             const dataStrA = a.data_avaliacao || a.data;
@@ -278,45 +284,27 @@ export default function EstatisticasAtletaCliente({ idAtleta }: { idAtleta: numb
                             return dateB.getTime() - dateA.getTime();
                           })[0];
                           
-                          // Preferir data_avaliacao (já formatada no backend) se disponível
+                          console.log(`[DEBUG] Avaliação mais recente:`, avaliacaoMaisRecente);
+                          
+                          // Se temos data_avaliacao formatada (DD/MM/YYYY), usar ela diretamente
                           if (avaliacaoMaisRecente.data_avaliacao && 
                               avaliacaoMaisRecente.data_avaliacao.includes('/')) {
                             console.log(`[DEBUG] Usando data formatada do backend:`, avaliacaoMaisRecente.data_avaliacao);
                             return avaliacaoMaisRecente.data_avaliacao;
                           }
                           
-                          // Fallback: processar data ISO
+                          // Fallback: processar data ISO se necessário
                           const dataStr = avaliacaoMaisRecente.data_avaliacao || avaliacaoMaisRecente.data;
-                          console.log(`[DEBUG] Data da avaliação mais recente (raw):`, dataStr);
+                          console.log(`[DEBUG] Processando data:`, dataStr);
                           
                           if (!dataStr) {
-                            return '13/08/2025';
+                            return 'N/A';
                           }
                           
-                          let data: Date;
-                          
-                          // Tentar diferentes formatos de data
-                          if (dataStr.includes('T')) {
-                            // Formato ISO: 2023-12-15T10:30:00.000Z
-                            data = new Date(dataStr);
-                          } else if (dataStr.includes('-')) {
-                            // Formato: 2023-12-15 ou YYYY-MM-DD
-                            const partes = dataStr.split(' ')[0]; // Pega apenas a parte da data
-                            data = new Date(partes + 'T00:00:00');
-                          } else if (dataStr.includes('/')) {
-                            // Formato: DD/MM/YYYY
-                            const [dia, mes, ano] = dataStr.split('/');
-                            data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
-                          } else {
-                            // Parsing direto
-                            data = new Date(dataStr);
-                          }
-                          
-                          console.log(`[DEBUG] Data parseada:`, data);
-                          console.log(`[DEBUG] Data válida?`, !isNaN(data.getTime()));
-                          
+                          const data = new Date(dataStr);
                           if (isNaN(data.getTime())) {
-                            return `Data inválida: ${dataStr}`;
+                            console.error(`[DEBUG] Data inválida:`, dataStr);
+                            return 'Data inválida';
                           }
                           
                           return data.toLocaleDateString('pt-BR');
