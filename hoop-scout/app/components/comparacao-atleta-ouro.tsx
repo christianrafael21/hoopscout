@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 interface Avaliacao {
+  id_avaliacao?: number;
   data: Date | string;
   dados_fisicos?: DadosFisicos;
   dados_tecnicos?: DadosTecnicos;
@@ -79,14 +80,43 @@ export function ComparacaoAtletaOuro({ idAtleta }: { idAtleta: number }) {
           return;
         }
 
-        // Ordenar avaliações por data (mais recente primeiro)
+        // Debug: verificar as datas das avaliações conforme chegam do backend
+        console.log(`[DEBUG COMPARACAO] Datas das avaliações (como recebidas):`, 
+          avaliacoes.map((av: Avaliacao, index: number) => ({
+            index,
+            id: av.id_avaliacao,
+            data: av.data,
+            idade: av.dados_fisicos?.idade,
+            data_formatted: new Date(av.data).toLocaleDateString()
+          }))
+        );
+
+        // Ordenar avaliações por data (mais recente primeiro) e por ID como critério de desempate
         const avaliacoesOrdenadas = avaliacoes.sort((a: Avaliacao, b: Avaliacao) => {
           const dataA = new Date(a.data);
           const dataB = new Date(b.data);
-          return dataB.getTime() - dataA.getTime();
+          
+          // Primeiro critério: data mais recente
+          const diffData = dataB.getTime() - dataA.getTime();
+          if (diffData !== 0) {
+            return diffData;
+          }
+          
+          // Critério de desempate: ID maior (mais recente)
+          const idA = a.id_avaliacao || 0;
+          const idB = b.id_avaliacao || 0;
+          return idB - idA;
         });
 
-        console.log(`[DEBUG COMPARACAO] Avaliações ordenadas:`, avaliacoesOrdenadas);
+        console.log(`[DEBUG COMPARACAO] Avaliações após ordenação (com critério de desempate):`, 
+          avaliacoesOrdenadas.map((av: Avaliacao, index: number) => ({
+            index,
+            id: av.id_avaliacao,
+            data: av.data,
+            idade: av.dados_fisicos?.idade,
+            data_formatted: new Date(av.data).toLocaleDateString()
+          }))
+        );
 
         // Usar apenas a avaliação mais recente para dados físicos (idade atual)
         const avaliacaoMaisRecente = avaliacoesOrdenadas[0];

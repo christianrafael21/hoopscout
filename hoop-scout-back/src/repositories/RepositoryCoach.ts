@@ -4,27 +4,44 @@ import connection from "../database/postgres";
 
 export async function getAllAthletes(): Promise<Athlete[]> {
     const { rows: athletes }: QueryResult<Athlete> = await connection.query(`
-        SELECT DISTINCT ON (u.id_usuario)
-               u.id_usuario as "userId",
-               u.primeiro_nome || ' ' || u.ultimo_nome as name,
-               df.altura as height,
-               df.peso as weight,
-               df.idade as age,
-               dt.tiro_livre as "freeThrow",
-               dt.arremesso_tres as "longShot",
-               dt.arremesso_livre as "shortShot",
-               dt.assistencias as "assistsGame",
-               a.data as "createdAt",
-               TO_CHAR(a.data, 'DD/MM/YYYY') as "evaluationDate"
-        FROM usuarios u
-        LEFT JOIN atleta_avaliacao aa ON aa.id_atleta = u.id_usuario
-        LEFT JOIN avaliacao a ON a.id_avaliacao = aa.id_avaliacao
-        LEFT JOIN dados_fisicos df ON df.id_dados_fisicos = a.id_dados_fisicos
-        LEFT JOIN dados_tecnicos dt ON dt.id_dados_tecnicos = a.id_dados_tecnicos
-        WHERE u.tipo = 'ATLETA' 
-        AND u.email NOT LIKE '%ouro%@hoopscout.com'
-        AND u.primeiro_nome != 'Atleta'
-        ORDER BY u.id_usuario, a.data DESC NULLS LAST;
+        WITH ultima_avaliacao AS (
+            SELECT DISTINCT ON (u.id_usuario)
+                   u.id_usuario,
+                   u.primeiro_nome || ' ' || u.ultimo_nome as name,
+                   df.altura as height,
+                   df.peso as weight,
+                   df.idade as age,
+                   dt.tiro_livre as "freeThrow",
+                   dt.arremesso_tres as "longShot",
+                   dt.arremesso_livre as "shortShot",
+                   dt.assistencias as "assistsGame",
+                   a.data as "createdAt",
+                   TO_CHAR(a.data, 'DD/MM/YYYY') as "evaluationDate",
+                   a.id_avaliacao
+            FROM usuarios u
+            LEFT JOIN atleta_avaliacao aa ON aa.id_atleta = u.id_usuario
+            LEFT JOIN avaliacao a ON a.id_avaliacao = aa.id_avaliacao
+            LEFT JOIN dados_fisicos df ON df.id_dados_fisicos = a.id_dados_fisicos
+            LEFT JOIN dados_tecnicos dt ON dt.id_dados_tecnicos = a.id_dados_tecnicos
+            WHERE u.tipo = 'ATLETA' 
+            AND u.email NOT LIKE '%ouro%@hoopscout.com'
+            AND u.primeiro_nome != 'Atleta'
+            ORDER BY u.id_usuario, a.data DESC NULLS LAST, a.id_avaliacao DESC NULLS LAST
+        )
+        SELECT 
+            id_usuario as "userId",
+            name,
+            height,
+            weight,
+            age,
+            "freeThrow",
+            "longShot", 
+            "shortShot",
+            "assistsGame",
+            "createdAt",
+            "evaluationDate"
+        FROM ultima_avaliacao
+        ORDER BY name;
     `);
     
     return athletes;
@@ -51,7 +68,7 @@ export async function getAthleteById(id: number): Promise<Athlete[]> {
         AND u.id_usuario = $1
         AND u.email NOT LIKE '%ouro%@hoopscout.com'
         AND u.primeiro_nome != 'Atleta'
-        ORDER BY a.data DESC NULLS LAST
+        ORDER BY a.data DESC NULLS LAST, a.id_avaliacao DESC NULLS LAST
         LIMIT 1;
     `,[id]);
 

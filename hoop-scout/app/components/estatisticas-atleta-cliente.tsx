@@ -17,6 +17,7 @@ interface DadosTecnicos {
 }
 
 interface Avaliacao {
+  id_avaliacao?: number;
   data_avaliacao?: string; // Data formatada vinda do backend
   data?: string; // Data ISO original
   dados_fisicos?: DadosFisicos;
@@ -47,7 +48,7 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
   }
 
   const avaliacoes = await response.json();
-  console.log(`[DEBUG] Avaliações recebidas:`, avaliacoes);
+  console.log(`[DEBUG ESTATISTICAS] Avaliações recebidas:`, avaliacoes);
   
   // Processar as avaliações para calcular as médias
   if (avaliacoes.length === 0) {
@@ -63,35 +64,61 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
     };
   }
 
-  // Calcular médias dos dados físicos
+  // Ordenar avaliações por data (mais recente primeiro) e ID como critério de desempate
+  const avaliacoesOrdenadas = avaliacoes.sort((a: Avaliacao, b: Avaliacao) => {
+    const dataA = new Date(a.data || a.data_avaliacao || 0);
+    const dataB = new Date(b.data || b.data_avaliacao || 0);
+    
+    // Primeiro critério: data mais recente
+    const diffData = dataB.getTime() - dataA.getTime();
+    if (diffData !== 0) {
+      return diffData;
+    }
+    
+    // Critério de desempate: ID maior (mais recente)
+    const idA = a.id_avaliacao || 0;
+    const idB = b.id_avaliacao || 0;
+    return idB - idA;
+  });
+
+  console.log(`[DEBUG ESTATISTICAS] Avaliações ordenadas:`, 
+    avaliacoesOrdenadas.map((av: Avaliacao, index: number) => ({
+      index,
+      id: av.id_avaliacao,
+      data: av.data || av.data_avaliacao,
+      idade: av.dados_fisicos?.idade
+    }))
+  );
+
+  // Usar dados físicos da avaliação mais recente para idade (dados atuais)
+  const avaliacaoMaisRecente = avaliacoesOrdenadas[0];
+  const dadosFisicosMaisRecente = avaliacaoMaisRecente?.dados_fisicos;
+  
+  console.log(`[DEBUG ESTATISTICAS] Dados físicos mais recentes:`, dadosFisicosMaisRecente);
+
+  // Calcular médias dos dados físicos (mas usar idade atual da avaliação mais recente)
   const somaDadosFisicos = avaliacoes.reduce((acc: DadosFisicos, avaliacao: Avaliacao) => {
-    console.log(`[DEBUG] Processando avaliação:`, avaliacao);
+    console.log(`[DEBUG ESTATISTICAS] Processando avaliação:`, avaliacao);
     if (avaliacao.dados_fisicos) {
-      console.log(`[DEBUG] Dados físicos da avaliação:`, avaliacao.dados_fisicos);
-      console.log(`[DEBUG] Tipos: idade=${typeof avaliacao.dados_fisicos.idade}, altura=${typeof avaliacao.dados_fisicos.altura}, peso=${typeof avaliacao.dados_fisicos.peso}`);
+      console.log(`[DEBUG ESTATISTICAS] Dados físicos da avaliação:`, avaliacao.dados_fisicos);
       
-      if (avaliacao.dados_fisicos.idade && !isNaN(Number(avaliacao.dados_fisicos.idade))) {
-        acc.idade += Number(avaliacao.dados_fisicos.idade);
-      }
+      // Para altura e peso, calcular média de todas as avaliações
       if (avaliacao.dados_fisicos.altura && !isNaN(Number(avaliacao.dados_fisicos.altura))) {
         acc.altura += Number(avaliacao.dados_fisicos.altura);
       }
       if (avaliacao.dados_fisicos.peso && !isNaN(Number(avaliacao.dados_fisicos.peso))) {
         acc.peso += Number(avaliacao.dados_fisicos.peso);
       }
+      // Idade não entra na soma porque vamos usar apenas a mais recente
     } else {
-      console.log(`[DEBUG] Avaliação sem dados físicos`);
+      console.log(`[DEBUG ESTATISTICAS] Avaliação sem dados físicos`);
     }
     return acc;
   }, { idade: 0, altura: 0, peso: 0 });
 
-  console.log(`[DEBUG] Soma dos dados físicos:`, somaDadosFisicos);
+  console.log(`[DEBUG ESTATISTICAS] Soma dos dados físicos:`, somaDadosFisicos);
 
-  // Contar quantas avaliações têm dados físicos válidos para cada campo
-  const avaliacoesComIdade = avaliacoes.filter((av: Avaliacao) => 
-    av.dados_fisicos && av.dados_fisicos.idade && !isNaN(Number(av.dados_fisicos.idade))
-  ).length;
-  
+  // Contar quantas avaliações têm dados físicos válidos para altura e peso
   const avaliacoesComAltura = avaliacoes.filter((av: Avaliacao) => 
     av.dados_fisicos && av.dados_fisicos.altura && !isNaN(Number(av.dados_fisicos.altura))
   ).length;
@@ -100,15 +127,15 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
     av.dados_fisicos && av.dados_fisicos.peso && !isNaN(Number(av.dados_fisicos.peso))
   ).length;
 
-  console.log(`[DEBUG] Contadores: idade=${avaliacoesComIdade}, altura=${avaliacoesComAltura}, peso=${avaliacoesComPeso}/${avaliacoes.length}`);
+  console.log(`[DEBUG ESTATISTICAS] Contadores: altura=${avaliacoesComAltura}, peso=${avaliacoesComPeso}/${avaliacoes.length}`);
 
   const mediaDadosFisicos = {
-    idade: avaliacoesComIdade > 0 ? Math.round(somaDadosFisicos.idade / avaliacoesComIdade) : 0,
+    idade: dadosFisicosMaisRecente ? Number(dadosFisicosMaisRecente.idade) || 0 : 0, // Usar idade atual, não média
     altura: avaliacoesComAltura > 0 ? Number((somaDadosFisicos.altura / avaliacoesComAltura).toFixed(2)) : 0,
     peso: avaliacoesComPeso > 0 ? Number((somaDadosFisicos.peso / avaliacoesComPeso).toFixed(2)) : 0
   };
 
-  console.log(`[DEBUG] Média dos dados físicos calculada:`, mediaDadosFisicos);
+  console.log(`[DEBUG ESTATISTICAS] Dados físicos processados:`, mediaDadosFisicos);
 
   // Calcular médias dos dados técnicos
   const somaDadosTecnicos = avaliacoes.reduce((acc: DadosTecnicos, avaliacao: Avaliacao) => {
@@ -130,6 +157,7 @@ async function getEstatisticasAtleta(idAtleta: number): Promise<EstatisticasAtle
 
   return {
     avaliacoes: avaliacoes.map((av: Avaliacao) => ({
+      id_avaliacao: av.id_avaliacao,
       dados_fisicos: av.dados_fisicos,
       dados_tecnicos: av.dados_tecnicos,
       data_avaliacao: av.data_avaliacao,
